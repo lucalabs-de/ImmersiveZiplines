@@ -1,5 +1,6 @@
 package de.lucalabs.ziplines.renderer.block.entity;
 
+import de.lucalabs.ziplines.ImmersiveZiplines;
 import de.lucalabs.ziplines.connection.Connection;
 import de.lucalabs.ziplines.curves.Catenary;
 import de.lucalabs.ziplines.curves.Curve;
@@ -11,11 +12,15 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 
 import java.util.function.Function;
 
 public class ZiplineRenderer {
+    private static final Identifier MODEL_TEXTURE = new Identifier(ImmersiveZiplines.MOD_ID, "textures/block/rope.png");
+    private static final Identifier MODEL_TEXTURE_ALT = new Identifier(ImmersiveZiplines.MOD_ID, "textures/block/rope_alt.png");
+
     private final WireModel model;
     private final float wireInflate;
 
@@ -42,12 +47,9 @@ public class ZiplineRenderer {
         if (currCat != null && prevCat != null) {
             final Curve cat = prevCat.lerp(currCat, delta);
             final Curve.SegmentIterator it = cat.iterator();
-            final VertexConsumer buf = RenderConstants.SOLID_TEXTURE.getVertexConsumer(source, RenderLayer::getEntityCutout);
-
-            final int color = this.getWireColor(conn);
-            final float r = ((color >> 16) & 0xFF) / 255.0F;
-            final float g = ((color >> 8) & 0xFF) / 255.0F;
-            final float b = (color & 0xFF) / 255.0F;
+            VertexConsumer texturedBuf = source.getBuffer(RenderLayer.getEntityCutoutNoCull(MODEL_TEXTURE));
+            VertexConsumer texturedBufAlt = source.getBuffer(RenderLayer.getEntityCutoutNoCull(MODEL_TEXTURE_ALT));
+            VertexConsumer[] bufs = {texturedBuf, texturedBufAlt};
 
             while (it.next()) {
                 matrix.push();
@@ -55,7 +57,7 @@ public class ZiplineRenderer {
                 matrix.multiply(RotationAxis.POSITIVE_Y.rotation(MathHelper.PI / 2.0F - it.getYaw()));
                 matrix.multiply(RotationAxis.POSITIVE_X.rotation(-it.getPitch()));
                 matrix.scale(1.0F + this.wireInflate, 1.0F, it.getLength() * 16.0F);
-                this.model.render(matrix, buf, packedLight, packedOverlay, r, g, b, 1.0F);
+                this.model.render(matrix, bufs[conn.getWorld().getRandom().nextInt(1)], packedLight, packedOverlay, 1, 1, 1, 1.0F);
                 matrix.pop();
                 this.renderSegment(conn, it, delta, matrix, packedLight, source, packedOverlay);
             }
@@ -68,7 +70,7 @@ public class ZiplineRenderer {
     }
 
     public static TexturedModelData wireLayer() {
-        return WireModel.createLayer(0, 0, 2);
+        return WireModel.createLayer(8, 8, 2);
     }
 
     protected void render(
@@ -100,7 +102,7 @@ public class ZiplineRenderer {
             mesh.getRoot().addChild("root", ModelPartBuilder.create()
                     .uv(u, v)
                     .cuboid(-size * 0.5F, -size * 0.5F, 0.0F, size, size, 1.0F), ModelTransform.NONE);
-            return TexturedModelData.of(mesh, 128, 128);
+            return TexturedModelData.of(mesh, 4, 4);
         }
     }
 }
