@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"facing=up":    { "model": "immersive-ziplines:block/fastener" },
+		"facing=down":  { "model": "immersive-ziplines:block/fastener", "x": 180 },
+		"facing=east":  { "model": "immersive-ziplines:block/fastener", "x": 90, "y": 90 },
+		"facing=west":  { "model": "immersive-ziplines:block/fastener", "x": 90, "y": 270 },
+		"facing=south": { "model": "immersive-ziplines:block/fastener", "x": 90, "y": 180 },
+		"facing=north": { "model": "immersive-ziplines:block/fastener", "x": 90 }
+    }
+}
