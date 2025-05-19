@@ -5,7 +5,7 @@ import de.lucalabs.ziplines.components.GenericComponent;
 import de.lucalabs.ziplines.components.ZiplineComponents;
 import de.lucalabs.ziplines.connection.Connection;
 import de.lucalabs.ziplines.connection.PlayerAction;
-import de.lucalabs.ziplines.curves.Curve;
+import de.lucalabs.ziplines.curves.Catenary;
 import de.lucalabs.ziplines.entity.FenceFastenerEntity;
 import de.lucalabs.ziplines.fastener.Fastener;
 import de.lucalabs.ziplines.fastener.FastenerType;
@@ -93,7 +93,7 @@ public final class ClientEventHandler {
     }
 
     private static void renderHighlight(final Connection connection, final MatrixStack matrix, final VertexConsumer buf) {
-        final Curve cat = connection.getCatenary();
+        final Catenary cat = connection.getCatenary();
         if (cat == null) {
             return;
         }

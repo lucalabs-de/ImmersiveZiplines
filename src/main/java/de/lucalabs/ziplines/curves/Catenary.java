@@ -4,7 +4,9 @@ import de.lucalabs.ziplines.connection.Connection;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
-public final class Catenary implements Curve {
+import java.util.NoSuchElementException;
+
+public final class Catenary {
     private static final int MIN_VERTEX_COUNT = 8;
 
     private final int count;
@@ -30,142 +32,6 @@ public final class Catenary implements Curve {
         this.y = y;
         this.length = length;
     }
-
-    @Override
-    public int getCount() {
-        return this.count;
-    }
-
-    @Override
-    public float getX() {
-        return this.x[this.count - 1] * this.dx;
-    }
-
-    @Override
-    public float getY() {
-        return this.y[this.count - 1];
-    }
-
-    @Override
-    public float getZ() {
-        return this.x[this.count - 1] * this.dz;
-    }
-
-    @Override
-    public float getX(final int i) {
-        return this.x[i] * this.dx;
-    }
-
-    @Override
-    public float getX(final int i, final float t) {
-        return MathHelper.lerp(t, this.x[i], this.x[i + 1]) * this.dx;
-    }
-
-    @Override
-    public float getY(final int i) {
-        return this.y[i];
-    }
-
-    @Override
-    public float getY(final int i, final float t) {
-        return MathHelper.lerp(t, this.y[i], this.y[i + 1]);
-    }
-
-    @Override
-    public float getZ(final int i) {
-        return this.x[i] * this.dz;
-    }
-
-    @Override
-    public float getZ(final int i, final float t) {
-        return MathHelper.lerp(t, this.x[i], this.x[i + 1]) * this.dz;
-    }
-
-    @Override
-    public float getDx(final int i) {
-        return (this.x[i + 1] - this.x[i]) * this.dx;
-    }
-
-    @Override
-    public float getDy(final int i) {
-        return (this.y[i + 1] - this.y[i]);
-    }
-
-    @Override
-    public float getDz(final int i) {
-        return (this.x[i + 1] - this.x[i]) * this.dz;
-    }
-
-    @Override
-    public float getLength() {
-        return this.length;
-    }
-
-    @Override
-    public Vec3d getT(float t) {
-        return null;
-    }
-
-    @Override
-    public Vec3d getTangentAtT(float t) {
-        return null;
-    }
-
-    @Override
-    public SegmentIterator iterator() {
-        return this.iterator(false);
-    }
-
-    @Override
-    public Curve lerp(final Curve curve, final float delta) {
-        if (this == curve) {
-            return this;
-        }
-        if (curve.getClass() != this.getClass()) {
-            return curve;
-        }
-        Catenary other = (Catenary) curve;
-        if (this.count > other.count) {
-            return other.lerp(this, 1.0F - delta);
-        }
-        final float[] nx = new float[this.count];
-        final float[] ny = new float[this.count];
-        for (int i = 0; i < this.count; i++) {
-            final boolean end = this.count != other.count && i == this.count - 1;
-            nx[i] = MathHelper.lerp(delta, this.x[i], other.x[end ? other.count - 1 : i]);
-            ny[i] = MathHelper.lerp(delta, this.y[i], other.y[end ? other.count - 1 : i]);
-        }
-        final float angle = de.lucalabs.ziplines.utils.MathHelper.lerpAngle(this.yaw, other.yaw, delta);
-        final float vx = MathHelper.cos(angle);
-        final float vz = MathHelper.sin(angle);
-        return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, other.length));
-    }
-
-    @Override
-    public SegmentIterator iterator(final boolean inclusive) {
-        return new CurveSegmentIterator<>(this, inclusive) {
-
-            @Override
-            public float getYaw() {
-                return this.curve.yaw;
-            }
-
-            @Override
-            protected float getPitch(int index) {
-                final float dx = this.curve.x[index + 1] - this.curve.x[index];
-                final float dy = this.curve.y[index + 1] - this.curve.y[index];
-                return (float) MathHelper.atan2(dy, dx);
-            }
-
-            @Override
-            public float getLength(final int index) {
-                final float dx = this.curve.x[index + 1] - this.curve.x[index];
-                final float dy = this.curve.y[index + 1] - this.curve.y[index];
-                return MathHelper.sqrt(dx * dx + dy * dy);
-            }
-        };
-    }
-
 
     public static Catenary from(final Vec3d direction, final float verticalYaw, final CubicBezier bezier, final float slack) {
         final float dist = (float) direction.length();
@@ -202,5 +68,210 @@ public final class Catenary implements Curve {
             length += MathHelper.sqrt(dx * dx + dy * dy);
         }
         return new Catenary(count, angle, vx, vz, x, y, length);
+    }
+
+    public int getCount() {
+        return this.count;
+    }
+
+    public float getX() {
+        return this.x[this.count - 1] * this.dx;
+    }
+
+    public float getY() {
+        return this.y[this.count - 1];
+    }
+
+    public float getZ() {
+        return this.x[this.count - 1] * this.dz;
+    }
+
+    public float getX(final int i) {
+        return this.x[i] * this.dx;
+    }
+
+    public float getX(final int i, final float t) {
+        return MathHelper.lerp(t, this.x[i], this.x[i + 1]) * this.dx;
+    }
+
+    public float getY(final int i) {
+        return this.y[i];
+    }
+
+    public float getY(final int i, final float t) {
+        return MathHelper.lerp(t, this.y[i], this.y[i + 1]);
+    }
+
+    public float getZ(final int i) {
+        return this.x[i] * this.dz;
+    }
+
+    public float getZ(final int i, final float t) {
+        return MathHelper.lerp(t, this.x[i], this.x[i + 1]) * this.dz;
+    }
+
+    public float getDx(final int i) {
+        return (this.x[i + 1] - this.x[i]) * this.dx;
+    }
+
+    public float getDy(final int i) {
+        return (this.y[i + 1] - this.y[i]);
+    }
+
+    public float getDz(final int i) {
+        return (this.x[i + 1] - this.x[i]) * this.dz;
+    }
+
+    public float getLength() {
+        return this.length;
+    }
+
+    public Vec3d getT(float t) {
+        return null;
+    }
+
+    public Vec3d getTangentAtT(float t) {
+        return null;
+    }
+
+    public SegmentIterator iterator() {
+        return this.iterator(false);
+    }
+
+    public Catenary lerp(final Catenary curve, final float delta) {
+        if (this == curve) {
+            return this;
+        }
+        if (this.count > curve.count) {
+            return curve.lerp(this, 1.0F - delta);
+        }
+        final float[] nx = new float[this.count];
+        final float[] ny = new float[this.count];
+        for (int i = 0; i < this.count; i++) {
+            final boolean end = this.count != curve.count && i == this.count - 1;
+            nx[i] = MathHelper.lerp(delta, this.x[i], curve.x[end ? curve.count - 1 : i]);
+            ny[i] = MathHelper.lerp(delta, this.y[i], curve.y[end ? curve.count - 1 : i]);
+        }
+        final float angle = de.lucalabs.ziplines.utils.MathHelper.lerpAngle(this.yaw, curve.yaw, delta);
+        final float vx = MathHelper.cos(angle);
+        final float vz = MathHelper.sin(angle);
+        return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, curve.length));
+    }
+
+    public SegmentIterator iterator(final boolean inclusive) {
+        return new CatenarySegmentIterator(inclusive);
+    }
+
+    private class CatenarySegmentIterator implements SegmentIterator {
+
+        protected final boolean inclusive;
+        protected int index;
+
+        public CatenarySegmentIterator(boolean inclusive) {
+            this.inclusive = inclusive;
+            this.index = -1;
+        }
+
+        public boolean hasNext() {
+            return this.index + 1 + (inclusive ? 0 : 1) < count;
+        }
+
+        @Override
+        public boolean next() {
+            final int nextIndex = this.index + 1;
+            if (inclusive ? nextIndex > count : nextIndex >= count) {
+                throw new NoSuchElementException();
+            }
+            this.index = nextIndex;
+            return nextIndex + (inclusive ? 0 : 1) < count;
+        }
+
+        protected void checkIndex(final float t) {
+            if (this.index + (inclusive && t == 0.0F ? 0 : 1) >= count) {
+                throw new IllegalStateException();
+            }
+        }
+
+        @Override
+        public int getIndex() {
+            this.checkIndex(0.0F);
+            return this.index;
+        }
+
+        @Override
+        public float getX(final float t) {
+            this.checkIndex(t);
+            if (t == 0.0F) {
+                return Catenary.this.getX(index);
+            }
+            if (t == 1.0F) {
+                return Catenary.this.getX(index + 1);
+            }
+            return Catenary.this.getX(index, t);
+        }
+
+        @Override
+        public float getY(final float t) {
+            this.checkIndex(t);
+            if (t == 0.0F) {
+                return Catenary.this.getY(this.index);
+            }
+            if (t == 1.0F) {
+                return Catenary.this.getY(this.index + 1);
+            }
+            return Catenary.this.getY(index, t);
+        }
+
+        @Override
+        public float getZ(final float t) {
+            this.checkIndex(t);
+            if (t == 0.0F) {
+                return Catenary.this.getZ(index);
+            }
+            if (t == 1.0F) {
+                return Catenary.this.getZ(index);
+            }
+            return Catenary.this.getZ(index, t);
+        }
+
+        @Override
+        public Vec3d getPos() {
+            return new Vec3d(getX(this.index), getY(this.index), getZ(this.index));
+        }
+
+        @Override
+        public float getYaw() {
+            return yaw;
+        }
+
+        @Override
+        public float getPitch() {
+            this.checkIndex(1.0F);
+            if (inclusive) {
+                throw new IllegalStateException();
+            }
+            return this.getPitch(this.index);
+        }
+
+        protected float getPitch(int index) {
+            final float dx = x[index + 1] - x[index];
+            final float dy = y[index + 1] - y[index];
+            return (float) MathHelper.atan2(dy, dx);
+        }
+
+        @Override
+        public float getLength() {
+            this.checkIndex(1.0F);
+            if (inclusive) {
+                throw new IllegalStateException();
+            }
+            return this.getLength(this.index);
+        }
+
+        public float getLength(final int index) {
+            final float dx = x[index + 1] - x[index];
+            final float dy = y[index + 1] - y[index];
+            return MathHelper.sqrt(dx * dx + dy * dy);
+        }
     }
 }

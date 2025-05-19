@@ -2,7 +2,8 @@ package de.lucalabs.ziplines.connection;
 
 import de.lucalabs.ziplines.curves.Catenary;
 import de.lucalabs.ziplines.curves.CubicBezier;
-import de.lucalabs.ziplines.curves.Curve;
+import de.lucalabs.ziplines.curves.Catenary;
+import de.lucalabs.ziplines.curves.SegmentIterator;
 import de.lucalabs.ziplines.fastener.Fastener;
 import de.lucalabs.ziplines.fastener.FastenerType;
 import de.lucalabs.ziplines.fastener.accessor.FastenerAccessor;
@@ -60,12 +61,12 @@ public class Connection implements NbtSerializable {
     }
 
     @Nullable
-    public final Curve getCatenary() {
+    public final Catenary getCatenary() {
         return this.catenary;
     }
 
     @Nullable
-    public final Curve getPrevCatenary() {
+    public final Catenary getPrevCatenary() {
         return this.prevCatenary == null ? this.catenary : this.prevCatenary;
     }
 
@@ -270,7 +271,7 @@ public class Connection implements NbtSerializable {
             return;
         }
         final float r = this.getRadius();
-        final Catenary.SegmentIterator it = this.catenary.iterator();
+        final SegmentIterator it = this.catenary.iterator();
         final Box[] bounds = new Box[count - 1];
         int index = 0;
         while (it.next()) {
