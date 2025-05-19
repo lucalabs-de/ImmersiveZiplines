@@ -221,9 +221,9 @@ public abstract class AbstractFastener<F extends FastenerAccessor> implements Fa
     }
 
     @Override
-    public Connection connect(final World world, final Fastener<?> destination, final NbtCompound compound, final boolean drop) {
+    public Connection connect(final World world, final Fastener<?> destination, final boolean drop) {
         final UUID uuid = MathHelper.randomUuid();
-        final Connection connection = this.createOutgoingConnection(world, uuid, destination, compound, drop);
+        final Connection connection = this.createOutgoingConnection(world, uuid, destination, drop);
         destination.createIncomingConnection(world, uuid, this);
         return connection;
     }
@@ -233,10 +233,9 @@ public abstract class AbstractFastener<F extends FastenerAccessor> implements Fa
             final World world,
             final UUID uuid,
             final Fastener<?> destination,
-            final NbtCompound compound,
             final boolean drop) {
         final Connection c = new Connection(world, this, uuid);
-        c.deserialize(destination, compound, drop);
+        c.initialize(destination, drop);
         this.outgoing.put(uuid, c);
         this.setDirty();
         return c;

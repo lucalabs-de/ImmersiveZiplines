@@ -10,63 +10,49 @@ public interface Curve {
 
     float getX();
 
-     float getY();
+    float getY();
 
-     float getZ();
+    float getZ();
 
-     float getX(final int i);
+    float getX(final int i);
 
-     float getX(final int i, float lerp);
+    float getX(final int i, float lerp);
 
-     float getY(final int i);
+    float getY(final int i);
 
-     float getY(final int i, float lerp);
+    float getY(final int i, float lerp);
 
-     float getZ(final int i);
+    float getZ(final int i);
 
-     float getZ(final int i, float lerp);
+    float getZ(final int i, float lerp);
 
-     float getDx(final int i);
+    float getDx(final int i);
 
-     float getDy(final int i);
+    float getDy(final int i);
 
-     float getDz(final int i);
+    float getDz(final int i);
 
-     float getLength();
+    float getLength();
+
+    Vec3d getT(float t);
+
+    Vec3d getTangentAtT(float t);
 
     default SegmentIterator iterator() {
         return this.iterator(false);
     }
 
-     Curve lerp(final Curve other, final float delta);
-
-    default void visitPoints(final float spacing, final boolean center, final PointVisitor visitor) {
-        float distance = center ? (this.getLength() % spacing + spacing) / 2.0F : 0;
-        int index = 0;
-        final SegmentIterator it = this.iterator();
-        while (it.next()) {
-            final float length = it.getLength();
-            while (distance < length) {
-                final float t = distance / length;
-                visitor.visit(index++, it.getX(t), it.getY(t), it.getZ(t), it.getYaw(), it.getPitch());
-                distance += spacing;
-            }
-            distance -= length;
-            if (!center && !it.hasNext()) {
-                visitor.visit(index++, it.getX(1.0F), it.getY(1.0F), it.getZ(1.0F), it.getYaw(), it.getPitch());
-            }
-        }
-    }
+    Curve lerp(final Curve other, final float delta);
 
     SegmentIterator iterator(final boolean inclusive);
 
-     interface SegmentIterator extends SegmentView {
+    interface SegmentIterator extends SegmentView {
         boolean hasNext();
 
         boolean next();
     }
 
-     interface SegmentView {
+    interface SegmentView {
         int getIndex();
 
         float getX(final float t);
@@ -82,10 +68,6 @@ public interface Curve {
         float getPitch();
 
         float getLength();
-    }
-
-     interface PointVisitor {
-        void visit(final int index, final float x, final float y, final float z, final float yaw, final float pitch);
     }
 
     abstract class CurveSegmentIterator<C extends Curve> implements SegmentIterator {

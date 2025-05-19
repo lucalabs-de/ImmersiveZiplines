@@ -41,12 +41,10 @@ public final class Catenary implements Curve {
         return this.x[this.count - 1] * this.dx;
     }
 
-
     @Override
     public float getY() {
         return this.y[this.count - 1];
     }
-
 
     @Override
     public float getZ() {
@@ -104,6 +102,16 @@ public final class Catenary implements Curve {
     }
 
     @Override
+    public Vec3d getT(float t) {
+        return null;
+    }
+
+    @Override
+    public Vec3d getTangentAtT(float t) {
+        return null;
+    }
+
+    @Override
     public SegmentIterator iterator() {
         return this.iterator(false);
     }
@@ -131,24 +139,6 @@ public final class Catenary implements Curve {
         final float vx = MathHelper.cos(angle);
         final float vz = MathHelper.sin(angle);
         return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, other.length));
-    }
-
-    public void visitPoints(final float spacing, final boolean center, final PointVisitor visitor) {
-        float distance = center ? (this.length % spacing + spacing) / 2.0F : 0;
-        int index = 0;
-        final Catenary.SegmentIterator it = this.iterator();
-        while (it.next()) {
-            final float length = it.getLength();
-            while (distance < length) {
-                final float t = distance / length;
-                visitor.visit(index++, it.getX(t), it.getY(t), it.getZ(t), it.getYaw(), it.getPitch());
-                distance += spacing;
-            }
-            distance -= length;
-            if (!center && !it.hasNext()) {
-                visitor.visit(index++, it.getX(1.0F), it.getY(1.0F), it.getZ(1.0F), it.getYaw(), it.getPitch());
-            }
-        }
     }
 
     @Override

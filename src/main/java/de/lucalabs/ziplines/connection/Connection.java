@@ -3,10 +3,8 @@ package de.lucalabs.ziplines.connection;
 import de.lucalabs.ziplines.curves.Catenary;
 import de.lucalabs.ziplines.curves.CubicBezier;
 import de.lucalabs.ziplines.curves.Curve;
-import de.lucalabs.ziplines.curves.Curve3D;
 import de.lucalabs.ziplines.fastener.Fastener;
 import de.lucalabs.ziplines.fastener.FastenerType;
-import de.lucalabs.ziplines.fastener.FenceFastener;
 import de.lucalabs.ziplines.fastener.accessor.FastenerAccessor;
 import de.lucalabs.ziplines.hitbox.Hitbox;
 import de.lucalabs.ziplines.hitbox.HitboxList;
@@ -14,7 +12,6 @@ import de.lucalabs.ziplines.hitbox.HitboxTree;
 import de.lucalabs.ziplines.registry.ZiplineItems;
 import de.lucalabs.ziplines.registry.ZiplineSounds;
 import de.lucalabs.ziplines.utils.IntIdentifiable;
-import de.lucalabs.ziplines.utils.ItemHelper;
 import de.lucalabs.ziplines.utils.NbtSerializable;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -43,22 +40,16 @@ public class Connection implements NbtSerializable {
     protected final Fastener<?> fastener;
     private final UUID uuid;
     protected World world;
-    @Nullable
-    protected Curve prevCatenary;
     protected float slack = 1;
+    protected Catenary prevCatenary;
+    @Nullable
+    private Catenary catenary;
     private FastenerAccessor destination;
-    @Nullable
-    private FastenerAccessor prevDestination;
-    @Nullable
-    private Curve catenary;
     private Hitbox hitbox = Hitbox.empty();
-
-    private boolean updateCatenary;
-
     private int prevStretchStage;
 
+    private boolean updateCatenary;
     private boolean removed;
-
     private boolean drop;
 
     public Connection(final World world, final Fastener<?> fastener, final UUID uuid) {
@@ -103,7 +94,6 @@ public class Connection implements NbtSerializable {
     }
 
     public final void setDestination(final Fastener<?> destination) {
-        this.prevDestination = this.destination;
         this.destination = destination.createAccessor();
         this.computeCatenary();
     }
@@ -125,12 +115,7 @@ public class Connection implements NbtSerializable {
     }
 
     public ItemStack getItemStack() {
-        final ItemStack stack = new ItemStack(ZiplineItems.ZIPLINE);
-        final NbtCompound tagCompound = this.serializeLogic();
-        if (!tagCompound.isEmpty()) {
-            stack.setNbt(tagCompound);
-        }
-        return stack;
+        return new ItemStack(ZiplineItems.ZIPLINE);
     }
 
     public float getRadius() {
@@ -148,7 +133,6 @@ public class Connection implements NbtSerializable {
     public final void remove() {
         if (!this.removed) {
             this.removed = true;
-            this.onRemove();
         }
     }
 
@@ -158,6 +142,11 @@ public class Connection implements NbtSerializable {
 
     public void computeCatenary() {
         this.updateCatenary = true;
+    }
+
+    public void initialize(final Fastener<?> destination, final boolean drop) {
+        this.destination = destination.createAccessor();
+        this.drop = drop;
     }
 
     public void disconnect(final PlayerEntity player, final Vec3d hit) {
@@ -193,9 +182,13 @@ public class Connection implements NbtSerializable {
             final Hand hand) {
 
         if (heldStack.isOf(Items.STRING)) {
-            return this.slacken(hit, heldStack, 0.2F);
+            this.slacken(hit, 0.2F);
+            return true;
         } else if (heldStack.isOf(Items.STICK)) {
-            return this.slacken(hit, heldStack, -0.2F);
+            this.slacken(hit, -0.2F);
+            return true;
+        } else if (heldStack.isOf(Items.BOW)) {
+            // TODO start ziplining!
         }
         return false;
     }
@@ -204,26 +197,9 @@ public class Connection implements NbtSerializable {
         return ZiplineItems.ZIPLINE.equals(stack.getItem());
     }
 
-    private boolean replace(final PlayerEntity player, final Vec3d hit, final ItemStack heldStack) {
-        return this.destination.get(this.world).map(dest -> {
-            this.fastener.removeConnection(this);
-            dest.removeConnection(this.uuid);
-            if (this.shouldDrop()) {
-                ItemHelper.giveItemToPlayer(player, this.getItemStack());
-            }
-            final NbtCompound data = heldStack.getNbt();
-            final Connection conn = this.fastener.connect(this.world, dest, data == null ? new NbtCompound() : data, true);
-            conn.slack = this.slack;
-            conn.onConnect(player.getWorld(), player, heldStack);
-            heldStack.decrement(1);
-            this.world.playSound(null, hit.x, hit.y, hit.z, ZiplineSounds.CORD_CONNECT, SoundCategory.BLOCKS, 1, 1);
-            return true;
-        }).orElse(false);
-    }
-
-    private boolean slacken(final Vec3d hit, final ItemStack heldStack, final float amount) {
+    private void slacken(final Vec3d hit, final float amount) {
         if (this.slack <= 0 && amount < 0 || this.slack >= MAX_SLACK && amount > 0) {
-            return true;
+            return;
         }
         this.slack = MathHelper.clamp(this.slack + amount, 0, MAX_SLACK);
         if (this.slack < 1e-2F) {
@@ -231,27 +207,13 @@ public class Connection implements NbtSerializable {
         }
         this.computeCatenary();
         this.world.playSound(null, hit.x, hit.y, hit.z, ZiplineSounds.CORD_STRETCH, SoundCategory.BLOCKS, 1, 0.8F + (MAX_SLACK - this.slack) * 0.4F);
-        return true;
-    }
-
-    public void onConnect(final World world, final PlayerEntity user, final ItemStack heldStack) {
-    }
-
-    protected void onRemove() {
-    }
-
-    protected void onUpdate() {
-    }
-
-    protected void onCalculateCatenary(final boolean relocated) {
     }
 
     public final boolean update(final Vec3d from) {
         this.prevCatenary = this.catenary;
         final boolean changed = this.destination.get(this.world, false).map(dest -> {
             final Vec3d point = dest.getConnectionPoint();
-            final boolean c = this.updateCatenary(from, dest, point);
-            this.onUpdate();
+            final boolean c = this.updateCatenary(from, point);
             final double dist = point.distanceTo(from);
             final double pull = dist - MAX_LENGTH + PULL_RANGE;
             if (pull > 0) {
@@ -277,29 +239,23 @@ public class Connection implements NbtSerializable {
         return changed;
     }
 
-    private boolean updateCatenary(final Vec3d from, final Fastener<?> dest, final Vec3d point) {
+    private boolean updateCatenary(final Vec3d from, final Vec3d point) {
         if (this.updateCatenary || this.isDynamic()) {
             final Vec3d vec = point.subtract(from);
             if (vec.length() > 1e-6) {
                 final Direction facing = this.fastener.getFacing();
-                if (this.fastener instanceof FenceFastener && dest instanceof FenceFastener && vec.horizontalLength() < 1e-2) {
-                    this.catenary = this.verticalHelix(vec);
-                } else {
-                    this.catenary = Catenary.from(
-                            vec,
-                            facing.getAxis() == Direction.Axis.Y
-                                    ? 0.0F
-                                    : (float) Math.toRadians(90.0F + facing.asRotation()),
-                            SLACK_CURVE,
-                            this.slack);
-                }
-                this.onCalculateCatenary(!this.destination.equals(this.prevDestination));
+                this.catenary = Catenary.from(
+                        vec,
+                        facing.getAxis() == Direction.Axis.Y
+                                ? 0.0F
+                                : (float) Math.toRadians(90.0F + facing.asRotation()),
+                        SLACK_CURVE,
+                        this.slack);
                 final HitboxList.Builder bob = new HitboxList.Builder();
                 this.addCollision(bob, from);
                 this.hitbox = bob.build();
             }
             this.updateCatenary = false;
-            this.prevDestination = this.destination;
             return true;
         }
         return false;
@@ -332,44 +288,10 @@ public class Connection implements NbtSerializable {
         collision.add(HitboxTree.build(i -> Segment.INSTANCE, i -> bounds[i], 1, bounds.length - 2));
     }
 
-    private Curve verticalHelix(final Vec3d vec) {
-        final float length = (float) vec.length();
-        final float height = (float) vec.y;
-        final float stepSize = 0.25F;
-        final float loopsPerBlock = 1.0F;
-        final float radius = 0.33F;
-        final int steps = (int) (MathHelper.TAU * radius * loopsPerBlock * length / stepSize);
-        final float rad = -MathHelper.TAU * (loopsPerBlock * length);
-        final float[] x = new float[steps];
-        final float[] y = new float[steps];
-        final float[] z = new float[steps];
-        float helixLength = 0.0F;
-        for (int i = 0; i < steps; i++) {
-            float t = (float) i / (steps - 1);
-            x[i] = radius * MathHelper.cos(t * rad);
-            y[i] = t * height;
-            z[i] = radius * MathHelper.sin(t * rad);
-            if (i > 0) {
-                helixLength += MathHelper.sqrt(
-                        MathHelper.square(x[i] - x[i - 1]) +
-                                MathHelper.square(y[i] - y[i - 1]) +
-                                MathHelper.square(z[i] - z[i - 1]));
-            }
-        }
-        return new Curve3D(steps, x, y, z, helixLength);
-    }
-
-    public void deserialize(final Fastener<?> destination, final NbtCompound compound, final boolean drop) {
-        this.destination = destination.createAccessor();
-        this.drop = drop;
-        this.deserializeLogic(compound);
-    }
-
     @Override
     public NbtCompound serialize() {
         final NbtCompound compound = new NbtCompound();
         compound.put("destination", FastenerType.serialize(this.destination));
-        compound.put("logic", this.serializeLogic());
         compound.putFloat("slack", this.slack);
         if (!this.drop) compound.putBoolean("drop", false);
         return compound;
@@ -378,23 +300,16 @@ public class Connection implements NbtSerializable {
     @Override
     public void deserialize(final NbtCompound compound) {
         this.destination = FastenerType.deserialize(compound.getCompound("destination"));
-        this.deserializeLogic(compound.getCompound("logic"));
         this.slack = compound.contains("slack", NbtElement.NUMBER_TYPE) ? compound.getFloat("slack") : 1;
         this.drop = !compound.contains("drop", NbtElement.NUMBER_TYPE) || compound.getBoolean("drop");
         this.updateCatenary = true;
     }
 
-    public NbtCompound serializeLogic() {
-        return new NbtCompound();
-    }
-
-    public void deserializeLogic(final NbtCompound compound) {
-    }
-
     public static final class Segment implements IntIdentifiable {
         public static final Segment INSTANCE = new Segment();
 
-        private Segment() {}
+        private Segment() {
+        }
 
         @Override
         public int getId() {

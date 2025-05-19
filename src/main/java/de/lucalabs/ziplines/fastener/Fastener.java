@@ -66,13 +66,12 @@ public interface Fastener<F extends FastenerAccessor> {
 
     boolean reconnect(final World world, Connection connection, Fastener<?> newDestination);
 
-    Connection connect(World world, Fastener<?> destination, NbtCompound compound, final boolean drop);
+    Connection connect(World world, Fastener<?> destination, final boolean drop);
 
     Connection createOutgoingConnection(
             World world,
             UUID uuid,
             Fastener<?> destination,
-            NbtCompound compound,
             final boolean drop);
 
     void createIncomingConnection(World world, UUID uuid, Fastener<?> destination);
