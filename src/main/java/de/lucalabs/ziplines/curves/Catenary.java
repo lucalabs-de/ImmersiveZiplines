@@ -3,10 +3,12 @@ package de.lucalabs.ziplines.curves;
 import de.lucalabs.ziplines.connection.Connection;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public final class Catenary {
+public final class Catenary implements Iterable<SegmentView> {
     private static final int MIN_VERTEX_COUNT = 8;
 
     private final int count;
@@ -134,8 +136,14 @@ public final class Catenary {
         return null;
     }
 
-    public SegmentIterator iterator() {
-        return this.iterator(false);
+    public float getClosestPointTo(Vec3d pos) {
+        return 0;
+    }
+
+    @Override
+    @NotNull
+    public Iterator<SegmentView> iterator() {
+        return new CatenarySegmentIterator();
     }
 
     public Catenary lerp(final Catenary curve, final float delta) {
@@ -158,117 +166,97 @@ public final class Catenary {
         return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, curve.length));
     }
 
-    public SegmentIterator iterator(final boolean inclusive) {
-        return new CatenarySegmentIterator(inclusive);
-    }
+    private class CatenarySegmentIterator implements Iterator<SegmentView> {
 
-    private class CatenarySegmentIterator implements SegmentIterator {
-
-        protected final boolean inclusive;
         protected int index;
 
-        public CatenarySegmentIterator(boolean inclusive) {
-            this.inclusive = inclusive;
+        public CatenarySegmentIterator() {
             this.index = -1;
         }
 
         public boolean hasNext() {
-            return this.index + 1 + (inclusive ? 0 : 1) < count;
+            return this.index + 2 < count;
         }
 
         @Override
-        public boolean next() {
+        public SegmentView next() {
             final int nextIndex = this.index + 1;
-            if (inclusive ? nextIndex > count : nextIndex >= count) {
+
+            if (nextIndex >= count) {
                 throw new NoSuchElementException();
             }
+
             this.index = nextIndex;
-            return nextIndex + (inclusive ? 0 : 1) < count;
+
+            return new SegmentView() {
+                @Override
+                public int getIndex() {
+                    return nextIndex;
+                }
+
+                @Override
+                public float getX(float t) {
+                    if (t == 0.0F) {
+                        return Catenary.this.getX(nextIndex);
+                    }
+                    if (t == 1.0F) {
+                        return Catenary.this.getX(nextIndex + 1);
+                    }
+                    return Catenary.this.getX(nextIndex, t);
+                }
+
+                @Override
+                public float getY(float t) {
+                    if (t == 0.0F) {
+                        return Catenary.this.getY(nextIndex);
+                    }
+                    if (t == 1.0F) {
+                        return Catenary.this.getY(nextIndex + 1);
+                    }
+
+                    return Catenary.this.getY(nextIndex, t);
+                }
+
+                @Override
+                public float getZ(float t) {
+                    if (t == 0.0F) {
+                        return Catenary.this.getZ(nextIndex);
+                    }
+                    if (t == 1.0F) {
+                        return Catenary.this.getZ(nextIndex /* + 1? */);
+                    }
+                    return Catenary.this.getZ(nextIndex, t);
+                }
+
+                @Override
+                public Vec3d getPos() {
+                    return new Vec3d(getX(nextIndex), getY(nextIndex), getZ(nextIndex));
+                }
+
+                @Override
+                public float getYaw() {
+                    return Catenary.this.yaw;
+                }
+
+                @Override
+                public float getPitch() {
+                    return CatenarySegmentIterator.this.getPitch(nextIndex);
+                }
+
+                @Override
+                public float getLength() {
+                    return CatenarySegmentIterator.this.getLength(nextIndex);
+                }
+            };
         }
 
-        protected void checkIndex(final float t) {
-            if (this.index + (inclusive && t == 0.0F ? 0 : 1) >= count) {
-                throw new IllegalStateException();
-            }
-        }
-
-        @Override
-        public int getIndex() {
-            this.checkIndex(0.0F);
-            return this.index;
-        }
-
-        @Override
-        public float getX(final float t) {
-            this.checkIndex(t);
-            if (t == 0.0F) {
-                return Catenary.this.getX(index);
-            }
-            if (t == 1.0F) {
-                return Catenary.this.getX(index + 1);
-            }
-            return Catenary.this.getX(index, t);
-        }
-
-        @Override
-        public float getY(final float t) {
-            this.checkIndex(t);
-            if (t == 0.0F) {
-                return Catenary.this.getY(this.index);
-            }
-            if (t == 1.0F) {
-                return Catenary.this.getY(this.index + 1);
-            }
-            return Catenary.this.getY(index, t);
-        }
-
-        @Override
-        public float getZ(final float t) {
-            this.checkIndex(t);
-            if (t == 0.0F) {
-                return Catenary.this.getZ(index);
-            }
-            if (t == 1.0F) {
-                return Catenary.this.getZ(index);
-            }
-            return Catenary.this.getZ(index, t);
-        }
-
-        @Override
-        public Vec3d getPos() {
-            return new Vec3d(getX(this.index), getY(this.index), getZ(this.index));
-        }
-
-        @Override
-        public float getYaw() {
-            return yaw;
-        }
-
-        @Override
-        public float getPitch() {
-            this.checkIndex(1.0F);
-            if (inclusive) {
-                throw new IllegalStateException();
-            }
-            return this.getPitch(this.index);
-        }
-
-        protected float getPitch(int index) {
+        private float getPitch(int index) {
             final float dx = x[index + 1] - x[index];
             final float dy = y[index + 1] - y[index];
             return (float) MathHelper.atan2(dy, dx);
         }
 
-        @Override
-        public float getLength() {
-            this.checkIndex(1.0F);
-            if (inclusive) {
-                throw new IllegalStateException();
-            }
-            return this.getLength(this.index);
-        }
-
-        public float getLength(final int index) {
+        private float getLength(final int index) {
             final float dx = x[index + 1] - x[index];
             final float dy = y[index + 1] - y[index];
             return MathHelper.sqrt(dx * dx + dy * dy);

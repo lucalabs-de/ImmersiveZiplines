@@ -1,6 +1,8 @@
 package de.lucalabs.ziplines.curves;
 
-public interface SegmentIterator extends SegmentView {
-    boolean hasNext();
-    boolean next();
+import de.lucalabs.ziplines.connection.Connection;
+
+import java.util.Iterator;
+
+public interface SegmentIterator extends Iterator<Connection.Segment> {
 }

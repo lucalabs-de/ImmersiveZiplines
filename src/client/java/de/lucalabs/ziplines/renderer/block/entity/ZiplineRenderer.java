@@ -4,6 +4,7 @@ import de.lucalabs.ziplines.ImmersiveZiplines;
 import de.lucalabs.ziplines.connection.Connection;
 import de.lucalabs.ziplines.curves.Catenary;
 import de.lucalabs.ziplines.curves.SegmentIterator;
+import de.lucalabs.ziplines.curves.SegmentView;
 import de.lucalabs.ziplines.utils.MathHelper;
 import net.minecraft.client.model.*;
 import net.minecraft.client.render.RenderLayer;
@@ -49,12 +50,11 @@ public class ZiplineRenderer {
 
         if (currCat != null && prevCat != null) {
             final Catenary cat = prevCat.lerp(currCat, delta);
-            final SegmentIterator it = cat.iterator();
             VertexConsumer texturedBuf = source.getBuffer(RenderLayer.getEntityCutoutNoCull(MODEL_TEXTURE));
             VertexConsumer texturedBufAlt = source.getBuffer(RenderLayer.getEntityCutoutNoCull(MODEL_TEXTURE_ALT));
             VertexConsumer[] bufs = {texturedBuf, texturedBufAlt};
 
-            while (it.next()) {
+            for (SegmentView it : cat) {
                 matrix.push();
                 matrix.translate(it.getX(0.0F), it.getY(0.0F), it.getZ(0.0F));
                 matrix.multiply(RotationAxis.POSITIVE_Y.rotation(MathHelper.PI / 2.0F - it.getYaw()));

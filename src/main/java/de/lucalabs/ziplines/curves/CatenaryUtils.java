@@ -2,6 +2,10 @@ package de.lucalabs.ziplines.curves;
 
 import net.minecraft.util.math.MathHelper;
 
+/*
+ * Based on
+ * https://www.mathworks.com/matlabcentral/fileexchange/38550-catenary-hanging-rope-between-two-points/content/catenary.m
+ */
 public final class CatenaryUtils {
     private CatenaryUtils() {}
 

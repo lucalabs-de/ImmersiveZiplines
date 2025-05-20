@@ -1,9 +1,7 @@
 package de.lucalabs.ziplines.connection;
 
+import de.lucalabs.ziplines.curves.*;
 import de.lucalabs.ziplines.curves.Catenary;
-import de.lucalabs.ziplines.curves.CubicBezier;
-import de.lucalabs.ziplines.curves.Catenary;
-import de.lucalabs.ziplines.curves.SegmentIterator;
 import de.lucalabs.ziplines.fastener.Fastener;
 import de.lucalabs.ziplines.fastener.FastenerType;
 import de.lucalabs.ziplines.fastener.accessor.FastenerAccessor;
@@ -32,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 public class Connection implements NbtSerializable {
-    public static final int MAX_LENGTH = 32;
+    public static final int MAX_LENGTH = 48;
     public static final double PULL_RANGE = 5;
     public static final float MAX_SLACK = 3;
 
@@ -271,10 +269,9 @@ public class Connection implements NbtSerializable {
             return;
         }
         final float r = this.getRadius();
-        final SegmentIterator it = this.catenary.iterator();
         final Box[] bounds = new Box[count - 1];
         int index = 0;
-        while (it.next()) {
+        for (SegmentView it : this.catenary) {
             final float x0 = it.getX(0.0F);
             final float y0 = it.getY(0.0F);
             final float z0 = it.getZ(0.0F);

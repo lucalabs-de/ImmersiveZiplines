@@ -3,7 +3,7 @@ package de.lucalabs.ziplines.fastener;
 import com.google.common.collect.ImmutableList;
 import de.lucalabs.ziplines.connection.Connection;
 import de.lucalabs.ziplines.curves.Catenary;
-import de.lucalabs.ziplines.curves.SegmentIterator;
+import de.lucalabs.ziplines.curves.SegmentView;
 import de.lucalabs.ziplines.fastener.accessor.FastenerAccessor;
 import de.lucalabs.ziplines.utils.BoxBuilder;
 import de.lucalabs.ziplines.utils.Constants;
@@ -122,12 +122,15 @@ public abstract class AbstractFastener<F extends FastenerAccessor> implements Fa
             if (catenary == null) {
                 continue;
             }
-            final SegmentIterator it = catenary.iterator();
-            while (it.next()) {
+
+            SegmentView last = null;
+            for (SegmentView it : catenary) {
                 builder.include(it.getX(0.0F), it.getY(0.0F), it.getZ(0.0F));
-                if (!it.hasNext()) {
-                    builder.include(it.getX(1.0F), it.getY(1.0F), it.getZ(1.0F));
-                }
+                last = it;
+            }
+
+            if (last != null) {
+                builder.include(last.getX(1.0F), last.getY(1.0F), last.getZ(1.0F));
             }
         }
         this.bounds = builder.add(this.getConnectionPoint()).build();
