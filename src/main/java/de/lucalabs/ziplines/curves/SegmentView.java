@@ -11,7 +11,7 @@ public interface SegmentView {
 
     float getZ(final float t);
 
-    Vec3d getPos();
+    Vec3d getPos(final float t);
 
     float getYaw();
 

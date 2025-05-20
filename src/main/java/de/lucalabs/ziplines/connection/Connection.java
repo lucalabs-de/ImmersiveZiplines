@@ -1,7 +1,8 @@
 package de.lucalabs.ziplines.connection;
 
-import de.lucalabs.ziplines.curves.*;
 import de.lucalabs.ziplines.curves.Catenary;
+import de.lucalabs.ziplines.curves.CubicBezier;
+import de.lucalabs.ziplines.curves.SegmentView;
 import de.lucalabs.ziplines.fastener.Fastener;
 import de.lucalabs.ziplines.fastener.FastenerType;
 import de.lucalabs.ziplines.fastener.accessor.FastenerAccessor;
@@ -36,7 +37,7 @@ public class Connection implements NbtSerializable {
 
     private static final CubicBezier SLACK_CURVE = new CubicBezier(0.495F, 0.505F, 0.495F, 0.505F);
 
-    protected final Fastener<?> fastener;
+    protected final Fastener<?> fastener; // of source
     private final UUID uuid;
     protected World world;
     protected float slack = 1;
@@ -187,13 +188,31 @@ public class Connection implements NbtSerializable {
             this.slacken(hit, -0.2F);
             return true;
         } else if (heldStack.isOf(Items.BOW)) {
-            // TODO start ziplining!
+            this.startZipline(player, hit);
         }
         return false;
     }
 
     public boolean matches(final ItemStack stack) {
         return ZiplineItems.ZIPLINE.equals(stack.getItem());
+    }
+
+    private void startZipline(PlayerEntity player, Vec3d startPos) {
+        if (catenary != null) {
+            Vec3d relativeTo = fastener.getConnectionPoint();
+            Vec3d closestZiplinePoint = catenary.getClosestPointTo(relativeTo.relativize(startPos)).add(relativeTo);
+            Vec3d desiredPlayerPosition = closestZiplinePoint.offset(Direction.DOWN, 2);
+
+            Vec3d offsetToStartPos = desiredPlayerPosition.subtract(player.getPos());
+
+            if (player.getWorld().isSpaceEmpty(player.getBoundingBox().offset(offsetToStartPos))) {
+                player.teleport(desiredPlayerPosition.getX(), desiredPlayerPosition.getY(), desiredPlayerPosition.getZ());
+            }
+
+            player.setNoGravity(true);
+
+            // TODO start ziplining!
+        }
     }
 
     private void slacken(final Vec3d hit, final float amount) {

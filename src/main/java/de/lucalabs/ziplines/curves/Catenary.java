@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.BiFunction;
 
 public final class Catenary implements Iterable<SegmentView> {
     private static final int MIN_VERTEX_COUNT = 8;
@@ -129,15 +130,47 @@ public final class Catenary implements Iterable<SegmentView> {
     }
 
     public Vec3d getT(float t) {
-        return null;
+        return atTSegmentDo(t, SegmentView::getPos);
     }
 
     public Vec3d getTangentAtT(float t) {
-        return null;
+        return atTSegmentDo(t, (seg, x) -> seg.getPos(1).subtract(seg.getPos(0)).normalize()); // TODO also an avoidable sqrt
     }
 
-    public float getClosestPointTo(Vec3d pos) {
-        return 0;
+    private <T> T atTSegmentDo(float t, BiFunction<SegmentView, Float, T> f) {
+        float distanceFrom0 = getLength() * t;
+        float totalLengthTraveled = 0;
+        for (SegmentView segment : this) {
+            float segLength = segment.getLength();
+            if (totalLengthTraveled + segLength > distanceFrom0) {
+                float distanceInSegment = distanceFrom0 - totalLengthTraveled;
+                float t2 = distanceInSegment / segLength;
+                return f.apply(segment, t2);
+            } else {
+                totalLengthTraveled += segLength;
+            }
+        }
+
+        throw new AssertionError("this should never happen");
+    }
+
+    public Vec3d getClosestPointTo(Vec3d pos) {
+        double minSqDist = Integer.MAX_VALUE;
+        Vec3d closestPoint = Vec3d.ZERO;
+
+        for (SegmentView seg : this) {
+            Vec3d toPoint = pos.subtract(seg.getPos(0));
+            Vec3d segment = seg.getPos(1).subtract(seg.getPos(0));
+            float closestSegmentT = MathHelper.clamp((float) (toPoint.dotProduct(segment) / segment.lengthSquared()), 0, 1);
+            double sqDist = seg.getPos(closestSegmentT).subtract(pos).lengthSquared();
+
+            if (sqDist < minSqDist) {
+                minSqDist = sqDist;
+                closestPoint = seg.getPos(closestSegmentT);
+            }
+        }
+
+        return closestPoint;
     }
 
     @Override
@@ -223,14 +256,14 @@ public final class Catenary implements Iterable<SegmentView> {
                         return Catenary.this.getZ(nextIndex);
                     }
                     if (t == 1.0F) {
-                        return Catenary.this.getZ(nextIndex /* + 1? */);
+                        return Catenary.this.getZ(nextIndex + 1);
                     }
                     return Catenary.this.getZ(nextIndex, t);
                 }
 
                 @Override
-                public Vec3d getPos() {
-                    return new Vec3d(getX(nextIndex), getY(nextIndex), getZ(nextIndex));
+                public Vec3d getPos(float t) {
+                    return new Vec3d(getX(t), getY(t), getZ(t));
                 }
 
                 @Override
@@ -259,7 +292,7 @@ public final class Catenary implements Iterable<SegmentView> {
         private float getLength(final int index) {
             final float dx = x[index + 1] - x[index];
             final float dy = y[index + 1] - y[index];
-            return MathHelper.sqrt(dx * dx + dy * dy);
+            return MathHelper.sqrt(dx * dx + dy * dy); // TODO precompute these lengths, this is really inefficent
         }
     }
 }
