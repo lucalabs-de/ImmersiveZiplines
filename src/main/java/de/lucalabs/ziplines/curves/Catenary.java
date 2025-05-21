@@ -154,9 +154,10 @@ public final class Catenary implements Iterable<SegmentView> {
         throw new AssertionError("this should never happen");
     }
 
-    public Vec3d getClosestPointTo(Vec3d pos) {
+    public PosInSegment snapToCurve(Vec3d pos) {
         double minSqDist = Integer.MAX_VALUE;
         Vec3d closestPoint = Vec3d.ZERO;
+        SegmentView closestSegment = null;
 
         for (SegmentView seg : this) {
             Vec3d toPoint = pos.subtract(seg.getPos(0));
@@ -167,10 +168,11 @@ public final class Catenary implements Iterable<SegmentView> {
             if (sqDist < minSqDist) {
                 minSqDist = sqDist;
                 closestPoint = seg.getPos(closestSegmentT);
+                closestSegment = seg;
             }
         }
 
-        return closestPoint;
+        return new PosInSegment(closestPoint, closestSegment);
     }
 
     @Override
@@ -198,6 +200,8 @@ public final class Catenary implements Iterable<SegmentView> {
         final float vz = MathHelper.sin(angle);
         return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, curve.length));
     }
+
+    public record PosInSegment(Vec3d pos, SegmentView segment) {}
 
     private class CatenarySegmentIterator implements Iterator<SegmentView> {
 

@@ -13,6 +13,7 @@ import de.lucalabs.ziplines.registry.ZiplineItems;
 import de.lucalabs.ziplines.registry.ZiplineSounds;
 import de.lucalabs.ziplines.utils.IntIdentifiable;
 import de.lucalabs.ziplines.utils.NbtSerializable;
+import de.lucalabs.ziplines.utils.ZiplineUser;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -188,7 +189,10 @@ public class Connection implements NbtSerializable {
             this.slacken(hit, -0.2F);
             return true;
         } else if (heldStack.isOf(Items.BOW)) {
-            this.startZipline(player, hit);
+            // TODO allow off hand bow as well
+            if (hand == Hand.MAIN_HAND) {
+                this.startZipline(player, hit);
+            }
         }
         return false;
     }
@@ -198,20 +202,20 @@ public class Connection implements NbtSerializable {
     }
 
     private void startZipline(PlayerEntity player, Vec3d startPos) {
-        if (catenary != null) {
+        if (catenary != null && player instanceof ZiplineUser playerUsingZipline) {
             Vec3d relativeTo = fastener.getConnectionPoint();
-            Vec3d closestZiplinePoint = catenary.getClosestPointTo(relativeTo.relativize(startPos)).add(relativeTo);
+            Vec3d closestZiplinePoint = catenary.snapToCurve(relativeTo.relativize(startPos)).pos().add(relativeTo);
             Vec3d desiredPlayerPosition = closestZiplinePoint.offset(Direction.DOWN, 2);
 
             Vec3d offsetToStartPos = desiredPlayerPosition.subtract(player.getPos());
 
             if (player.getWorld().isSpaceEmpty(player.getBoundingBox().offset(offsetToStartPos))) {
+                Vec3d velocityBeforeTp = player.getVelocity();
                 player.teleport(desiredPlayerPosition.getX(), desiredPlayerPosition.getY(), desiredPlayerPosition.getZ());
+                player.setVelocity(velocityBeforeTp);
             }
 
-            player.setNoGravity(true);
-
-            // TODO start ziplining!
+            playerUsingZipline.immersiveZiplines$startUsingZipline(catenary, relativeTo);
         }
     }
 

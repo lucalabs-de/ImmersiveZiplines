@@ -129,18 +129,6 @@ public final class ClientEventHandler {
     }
 
     @Nullable
-    public static Connection getHitConnection() {
-        final net.minecraft.util.hit.HitResult result = MinecraftClient.getInstance().crosshairTarget;
-        if (result instanceof EntityHitResult) {
-            final Entity entity = ((EntityHitResult) result).getEntity();
-            if (entity instanceof HitConnection) {
-                return ((HitConnection) entity).result.connection;
-            }
-        }
-        return null;
-    }
-
-    @Nullable
     private static HitResult getHitConnection(final World world, final Entity viewer) {
         final Box bounds = new Box(viewer.getBlockPos()).expand(Connection.MAX_LENGTH + 1.0D);
         final Set<Fastener<?>> fasteners = collectFasteners(world, bounds);

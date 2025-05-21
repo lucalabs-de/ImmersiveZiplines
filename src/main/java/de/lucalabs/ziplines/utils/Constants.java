@@ -1,6 +1,8 @@
 package de.lucalabs.ziplines.utils;
 
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 
 public final class Constants {
 
@@ -11,6 +13,8 @@ public final class Constants {
             Double.POSITIVE_INFINITY,
             Double.POSITIVE_INFINITY,
             Double.POSITIVE_INFINITY);
+
+    public static final Vec3d GRAVITY_ACCELERATION = Vec3d.of(Direction.DOWN.getVector()).multiply(32.0/400.0);
 
     private Constants() {}
 }
