@@ -13,6 +13,7 @@ import de.lucalabs.ziplines.hitbox.Hitbox;
 import de.lucalabs.ziplines.hitbox.Intersection;
 import de.lucalabs.ziplines.net.serverbound.InteractionConnectionMessage;
 import de.lucalabs.ziplines.renderer.RenderConstants;
+import de.lucalabs.ziplines.utils.ZiplineUser;
 import dev.onyxstudios.cca.api.v3.component.ComponentAccess;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.block.entity.BlockEntity;
@@ -24,6 +25,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -32,6 +34,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -294,7 +297,7 @@ public final class ClientEventHandler {
         @Override
         public boolean damage(final DamageSource source, final float amount) {
             if (source.getAttacker() == MinecraftClient.getInstance().player) {
-                this.processAction(PlayerAction.ATTACK);
+                this.notifyServer(PlayerAction.ATTACK);
                 return true;
             }
             return false;
@@ -303,16 +306,45 @@ public final class ClientEventHandler {
         @Override
         public ActionResult interact(final PlayerEntity player, final Hand hand) {
             if (player == MinecraftClient.getInstance().player) {
-                this.processAction(PlayerAction.INTERACT);
+                notifyServer(PlayerAction.INTERACT);
+
+                if (player.getStackInHand(hand).isOf(Items.BOW)) {
+                    startUsingZipline(player, this.result.connection, result.intersection.result());
+                }
+
                 return ActionResult.SUCCESS;
             }
             return super.interact(player, hand);
         }
 
-        private void processAction(final PlayerAction action) {
+        private void notifyServer(final PlayerAction action) {
             ClientPlayNetworking.send(
                     InteractionConnectionMessage.ID,
                     new InteractionConnectionMessage(this.result.connection, action, this.result.intersection));
+        }
+
+        private void startUsingZipline(final PlayerEntity player, final Connection c, final Vec3d startPos) {
+            if (player instanceof ZiplineUser playerUsingZipline) {
+                Catenary catenary = c.getCatenary();
+
+                if (catenary == null) {
+                    return;
+                }
+
+                Vec3d relativeTo = c.getFastener().getConnectionPoint();
+                Vec3d closestZiplinePoint = catenary.snapToCurve(relativeTo.relativize(startPos)).pos().add(relativeTo);
+                Vec3d desiredPlayerPosition = closestZiplinePoint.offset(Direction.DOWN, 2);
+
+                Vec3d offsetToStartPos = desiredPlayerPosition.subtract(player.getPos());
+
+                if (player.getWorld().isSpaceEmpty(player.getBoundingBox().offset(offsetToStartPos))) {
+                    Vec3d velocityBeforeTp = player.getVelocity();
+                    player.setPosition(desiredPlayerPosition.getX(), desiredPlayerPosition.getY(), desiredPlayerPosition.getZ());
+                    player.setVelocity(velocityBeforeTp);
+
+                    playerUsingZipline.immersiveZiplines$startUsingZipline(catenary, relativeTo);
+                }
+            }
         }
 
         @Override

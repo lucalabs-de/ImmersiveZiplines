@@ -14,7 +14,8 @@ public final class Constants {
             Double.POSITIVE_INFINITY,
             Double.POSITIVE_INFINITY);
 
-    public static final Vec3d GRAVITY_ACCELERATION = Vec3d.of(Direction.DOWN.getVector()).multiply(32.0/400.0);
+    public static final Vec3d DOWN = Vec3d.of(Direction.DOWN.getVector());
+    public static final double DRAG = 0.01;
 
     private Constants() {}
 }

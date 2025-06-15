@@ -138,11 +138,19 @@ public final class Catenary implements Iterable<SegmentView> {
     }
 
     private <T> T atTSegmentDo(float t, BiFunction<SegmentView, Float, T> f) {
+        if (t == 0) {
+            return f.apply(getSegmentAtIndex(0), 0F);
+        }
+
+        if (t == 1) {
+            return f.apply(getSegmentAtIndex(count - 2), 1F);
+        }
+
         float distanceFrom0 = getLength() * t;
         float totalLengthTraveled = 0;
         for (SegmentView segment : this) {
             float segLength = segment.getLength();
-            if (totalLengthTraveled + segLength > distanceFrom0) {
+            if (totalLengthTraveled + segLength >= distanceFrom0) {
                 float distanceInSegment = distanceFrom0 - totalLengthTraveled;
                 float t2 = distanceInSegment / segLength;
                 return f.apply(segment, t2);
@@ -158,6 +166,8 @@ public final class Catenary implements Iterable<SegmentView> {
         double minSqDist = Integer.MAX_VALUE;
         Vec3d closestPoint = Vec3d.ZERO;
         SegmentView closestSegment = null;
+        float currentOffsetFrom0 = 0;
+        float closestPointOffsetFrom0 = 0;
 
         for (SegmentView seg : this) {
             Vec3d toPoint = pos.subtract(seg.getPos(0));
@@ -165,14 +175,17 @@ public final class Catenary implements Iterable<SegmentView> {
             float closestSegmentT = MathHelper.clamp((float) (toPoint.dotProduct(segment) / segment.lengthSquared()), 0, 1);
             double sqDist = seg.getPos(closestSegmentT).subtract(pos).lengthSquared();
 
+            currentOffsetFrom0 += seg.getLength();
+
             if (sqDist < minSqDist) {
                 minSqDist = sqDist;
                 closestPoint = seg.getPos(closestSegmentT);
                 closestSegment = seg;
+                closestPointOffsetFrom0 = currentOffsetFrom0;
             }
         }
 
-        return new PosInSegment(closestPoint, closestSegment);
+        return new PosInSegment(closestPoint, closestSegment, closestPointOffsetFrom0 / getLength());
     }
 
     @Override
@@ -201,7 +214,84 @@ public final class Catenary implements Iterable<SegmentView> {
         return new Catenary(this.count, angle, vx, vz, nx, ny, MathHelper.lerp(delta, this.length, curve.length));
     }
 
-    public record PosInSegment(Vec3d pos, SegmentView segment) {}
+
+    private SegmentView getSegmentAtIndex(int index) {
+        return new SegmentView() {
+            @Override
+            public int getIndex() {
+                return index;
+            }
+
+            @Override
+            public float getX(float t) {
+                if (t == 0.0F) {
+                    return Catenary.this.getX(index);
+                }
+                if (t == 1.0F) {
+                    return Catenary.this.getX(index + 1);
+                }
+                return Catenary.this.getX(index, t);
+            }
+
+            @Override
+            public float getY(float t) {
+                if (t == 0.0F) {
+                    return Catenary.this.getY(index);
+                }
+                if (t == 1.0F) {
+                    return Catenary.this.getY(index + 1);
+                }
+
+                return Catenary.this.getY(index, t);
+            }
+
+            @Override
+            public float getZ(float t) {
+                if (t == 0.0F) {
+                    return Catenary.this.getZ(index);
+                }
+                if (t == 1.0F) {
+                    return Catenary.this.getZ(index + 1);
+                }
+                return Catenary.this.getZ(index, t);
+            }
+
+            @Override
+            public Vec3d getPos(float t) {
+                return new Vec3d(getX(t), getY(t), getZ(t));
+            }
+
+            @Override
+            public float getYaw() {
+                return Catenary.this.yaw;
+            }
+
+            @Override
+            public float getPitch() {
+                return Catenary.this.getPitch(index);
+            }
+
+            @Override
+            public float getLength() {
+                return Catenary.this.getLength(index);
+            }
+        };
+    }
+
+    private float getPitch(int index) {
+        final float dx = x[index + 1] - x[index];
+        final float dy = y[index + 1] - y[index];
+        return (float) MathHelper.atan2(dy, dx);
+    }
+
+    private float getLength(final int index) {
+        final float dx = x[index + 1] - x[index];
+        final float dy = y[index + 1] - y[index];
+        return MathHelper.sqrt(dx * dx + dy * dy); // TODO precompute these lengths, this is really inefficent
+    }
+
+    public record PosInSegment(Vec3d pos, SegmentView segment, float t) {
+    }
 
     private class CatenarySegmentIterator implements Iterator<SegmentView> {
 
@@ -225,78 +315,7 @@ public final class Catenary implements Iterable<SegmentView> {
 
             this.index = nextIndex;
 
-            return new SegmentView() {
-                @Override
-                public int getIndex() {
-                    return nextIndex;
-                }
-
-                @Override
-                public float getX(float t) {
-                    if (t == 0.0F) {
-                        return Catenary.this.getX(nextIndex);
-                    }
-                    if (t == 1.0F) {
-                        return Catenary.this.getX(nextIndex + 1);
-                    }
-                    return Catenary.this.getX(nextIndex, t);
-                }
-
-                @Override
-                public float getY(float t) {
-                    if (t == 0.0F) {
-                        return Catenary.this.getY(nextIndex);
-                    }
-                    if (t == 1.0F) {
-                        return Catenary.this.getY(nextIndex + 1);
-                    }
-
-                    return Catenary.this.getY(nextIndex, t);
-                }
-
-                @Override
-                public float getZ(float t) {
-                    if (t == 0.0F) {
-                        return Catenary.this.getZ(nextIndex);
-                    }
-                    if (t == 1.0F) {
-                        return Catenary.this.getZ(nextIndex + 1);
-                    }
-                    return Catenary.this.getZ(nextIndex, t);
-                }
-
-                @Override
-                public Vec3d getPos(float t) {
-                    return new Vec3d(getX(t), getY(t), getZ(t));
-                }
-
-                @Override
-                public float getYaw() {
-                    return Catenary.this.yaw;
-                }
-
-                @Override
-                public float getPitch() {
-                    return CatenarySegmentIterator.this.getPitch(nextIndex);
-                }
-
-                @Override
-                public float getLength() {
-                    return CatenarySegmentIterator.this.getLength(nextIndex);
-                }
-            };
-        }
-
-        private float getPitch(int index) {
-            final float dx = x[index + 1] - x[index];
-            final float dy = y[index + 1] - y[index];
-            return (float) MathHelper.atan2(dy, dx);
-        }
-
-        private float getLength(final int index) {
-            final float dx = x[index + 1] - x[index];
-            final float dy = y[index + 1] - y[index];
-            return MathHelper.sqrt(dx * dx + dy * dy); // TODO precompute these lengths, this is really inefficent
+            return getSegmentAtIndex(nextIndex);
         }
     }
 }

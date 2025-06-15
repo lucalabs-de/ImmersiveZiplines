@@ -203,19 +203,20 @@ public class Connection implements NbtSerializable {
 
     private void startZipline(PlayerEntity player, Vec3d startPos) {
         if (catenary != null && player instanceof ZiplineUser playerUsingZipline) {
-            Vec3d relativeTo = fastener.getConnectionPoint();
-            Vec3d closestZiplinePoint = catenary.snapToCurve(relativeTo.relativize(startPos)).pos().add(relativeTo);
-            Vec3d desiredPlayerPosition = closestZiplinePoint.offset(Direction.DOWN, 2);
-
-            Vec3d offsetToStartPos = desiredPlayerPosition.subtract(player.getPos());
-
-            if (player.getWorld().isSpaceEmpty(player.getBoundingBox().offset(offsetToStartPos))) {
-                Vec3d velocityBeforeTp = player.getVelocity();
-                player.teleport(desiredPlayerPosition.getX(), desiredPlayerPosition.getY(), desiredPlayerPosition.getZ());
-                player.setVelocity(velocityBeforeTp);
-            }
-
-            playerUsingZipline.immersiveZiplines$startUsingZipline(catenary, relativeTo);
+//            Vec3d relativeTo = fastener.getConnectionPoint();
+//            Vec3d closestZiplinePoint = catenary.snapToCurve(relativeTo.relativize(startPos)).pos().add(relativeTo);
+//            Vec3d desiredPlayerPosition = closestZiplinePoint.offset(Direction.DOWN, 2);
+//
+//            Vec3d offsetToStartPos = desiredPlayerPosition.subtract(player.getPos());
+//
+//            if (player.getWorld().isSpaceEmpty(player.getBoundingBox().offset(offsetToStartPos))) {
+//                Vec3d velocityBeforeTp = player.getVelocity();
+//                player.requestTeleport(desiredPlayerPosition.getX(), desiredPlayerPosition.getY(), desiredPlayerPosition.getZ());
+//                player.setVelocity(velocityBeforeTp);
+////                player.setPosition(desiredPlayerPosition);
+//
+//                playerUsingZipline.immersiveZiplines$startUsingZipline(catenary, relativeTo);
+//            }
         }
     }
 
